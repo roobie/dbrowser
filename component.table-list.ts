@@ -25,17 +25,15 @@ function initState(): State {
 export function TableList() {
   const state: State = initState();
 
-  function loadData(ordering: [string, SortDirection][] = []) {
+  function loadData(ordering: {columns:string[],directions:SortDirection[]} = {columns:[],directions:[]}) {
     if (ordering) {
-      for (const [column, dir] of ordering) {
-        state.sorting[column] = dir;
+      for (let i = 0; i < ordering.columns.length; ++i) {
+        state.sorting[ordering.columns[i]] = ordering.directions[i];
       }
     }
     api.get<string[]>("tables").then(
       (tables) => {
-        const a = ordering?.map((i) => i[0]);
-        const b = ordering?.map((i) => i[1]);
-        state.tables = orderBy(tables, a, b);
+        state.tables = orderBy(tables, ordering.columns, ordering.directions);
         state.loading = false;
         m.redraw();
       },
@@ -56,7 +54,7 @@ export function TableList() {
           label: "table name",
           sortDir: state.sorting["name"] || "asc",
           signals: {
-            onsort: (dir: SortDirection) => loadData([["name", dir]]),
+            onsort: (dir: SortDirection) => loadData({columns:['name'],directions:[dir]}),
           },
         }],
         records: state.tables.map(renderItem),
