@@ -1,3 +1,6 @@
+export interface TableRecord {
+  name: string;
+}
 export default {
   get<T>(resource: string): Promise<T> {
     return new Promise((resolve) => {

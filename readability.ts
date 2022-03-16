@@ -1,4 +1,4 @@
-function when<T>(predicate: boolean, thunk: () => T): T | undefined {
+export function when<T>(predicate: boolean, thunk: () => T): T | undefined {
   if (predicate) return thunk();
   return void 0;
 }

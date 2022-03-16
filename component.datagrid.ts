@@ -1,3 +1,4 @@
+import { when } from "./readability.ts";
 import m from "mithril";
 import { Vnode } from "mithril";
 import hyperscriptHelper from "hyperscript-helpers";
@@ -14,7 +15,7 @@ export interface DataGridColumnConfig {
   label: string;
   sortDir: SortDirection;
   signals?: {
-    onsort?: (SortDirection) => void;
+    onsort?: (dir: SortDirection) => void;
   };
 }
 export type DataGridColumnItem = string | DataGridColumnConfig;
@@ -25,7 +26,6 @@ export interface DataGridAttrs {
 }
 
 export function DataGrid(): Vnode {
-
   return {
     view(vnode: Vnode<DataGridAttrs>) {
       const { attrs } = vnode;
@@ -35,12 +35,13 @@ export function DataGrid(): Vnode {
             attrs.columns.map((column: DataGridColumnItem) =>
               typeof (column) === "string" ? th(column) : th([
                 span(column.label),
-                button({
-                  onclick: () => {
-                    const dir = column.sortDir === "asc" ? "desc" : "asc";
-                    column?.signals?.onsort?.call(null, dir);
-                  },
-                }, column.sortDir === 'asc' ? "ᐃ" : "ᐁ"),
+                when(typeof (column.sortDir) === "string", () =>
+                  button({
+                    onclick: () => {
+                      const dir = column.sortDir === "asc" ? "desc" : "asc";
+                      column?.signals?.onsort?.call(null, dir);
+                    },
+                  }, column.sortDir === "asc" ? "ᐃ" : "ᐁ")),
               ])
             ),
           ]),

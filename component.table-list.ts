@@ -3,9 +3,11 @@ import { LoadingScreen } from "./component.loading-screen.ts";
 import { navigate } from "./navigation.ts";
 import orderBy from "lodash/orderBy";
 import api from "./api.ts";
+import { TableRecord } from "./api.ts";
 import m from "mithril";
+import { Vnode } from "mithril";
 import hyperscriptHelper from "hyperscript-helpers";
-const { button } = hyperscriptHelper(m);
+const { button, tr, th, input } = hyperscriptHelper(m);
 
 interface TableListAttrs {
   tables: { name: string }[];
@@ -22,18 +24,37 @@ function initState(): State {
     sorting: {},
   };
 }
+interface DataLoaderParameters {
+  substringFilter: [keyof TableRecord, string][];
+  orderBy: [keyof TableRecord, SortDirection][];
+}
 export function TableList() {
   const state: State = initState();
 
-  function loadData(ordering: {columns:string[],directions:SortDirection[]} = {columns:[],directions:[]}) {
-    if (ordering) {
-      for (let i = 0; i < ordering.columns.length; ++i) {
-        state.sorting[ordering.columns[i]] = ordering.directions[i];
+  function loadData(
+    parameters: DataLoaderParameters = { substringFilter: [], orderBy: [] },
+  ) {
+    if (parameters.orderBy) {
+      for (const [columnName, dir] of parameters.orderBy) {
+        state.sorting[columnName] = dir;
       }
     }
-    api.get<string[]>("tables").then(
+    api.get<TableRecord[]>("tables").then(
       (tables) => {
-        state.tables = orderBy(tables, ordering.columns, ordering.directions);
+        state.tables = orderBy(
+          tables,
+          parameters.orderBy.map(([colName, _]) => colName),
+          parameters.orderBy.map(([_, sortDir]) => sortDir),
+        );
+        if (parameters.substringFilter.length > 0) {
+          state.tables = state.tables.filter((item:TableRecord) => {
+            for (const [field, term] of parameters.substringFilter) {
+              if (item[field].includes(term)) {
+                return true;
+              }
+            }
+          });
+        }
         state.loading = false;
         m.redraw();
       },
@@ -47,21 +68,39 @@ export function TableList() {
         loadData();
       }
     },
-    view(vnode: Vnode<TableListAttrs>) {
-      const { attrs } = vnode;
+    view() {
       const grid = m(DataGrid, {
-        columns: ["actions", {
-          label: "table name",
-          sortDir: state.sorting["name"] || "asc",
-          signals: {
-            onsort: (dir: SortDirection) => loadData({columns:['name'],directions:[dir]}),
+        columns: [
+          { label: "actions" },
+          {
+            label: "table name",
+            sortDir: state.sorting["name"] || "asc",
+            signals: {
+              onsort: (dir: SortDirection) =>
+                loadData({ substringFilter: [], orderBy: [["name", dir]] }),
+            },
           },
-        }],
+        ],
+        extraThead: [
+          tr([
+            th(),
+            th(
+              input({
+                type: "text",
+                oninput: (e) => {
+                  loadData({substringFilter:[['name', e.target.value]], orderBy:[]})
+                },
+                placeholder: "search",
+              }),
+            ),
+          ]),
+        ],
         records: state.tables.map(renderItem),
       });
       return m(LoadingScreen, { loading: state.loading, element: grid });
     },
   };
+
   function renderItem(tableMeta: { name: string }) {
     return [
       button({
