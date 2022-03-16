@@ -2,6 +2,7 @@ require("esbuild").build({
   entryPoints: ["webapp.ts"],
   bundle: true,
   outfile: "out.js",
+  sourcemap: true,
   watch: {
     onRebuild(error, result) {
       if (error) console.error("watch build failed:", error);

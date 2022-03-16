@@ -2,6 +2,8 @@ import { DataGrid, SortDirection } from "./component.datagrid.ts";
 import { LoadingScreen } from "./component.loading-screen.ts";
 import { navigate } from "./navigation.ts";
 import orderBy from "lodash/orderBy";
+import forEach from "lodash/forEach";
+import find from "lodash/find";
 import api from "./api.ts";
 import { TableRecord } from "./api.ts";
 import m from "mithril";
@@ -15,46 +17,42 @@ interface TableListAttrs {
 interface State {
   loading: boolean;
   tables: { name: string }[];
-  sorting: Record<string, SortDirection>;
+  orderBy: [keyof TableRecord, SortDirection | undefined][];
+  filterBy: Record<keyof TableRecord, string | undefined>;
 }
 function initState(): State {
   return {
     loading: true,
     tables: [],
-    sorting: {},
+    orderBy: [
+      ["name", "asc"],
+    ],
+    filterBy: {
+      name: void 0,
+    },
   };
 }
-interface DataLoaderParameters {
-  substringFilter: [keyof TableRecord, string][];
-  orderBy: [keyof TableRecord, SortDirection][];
-}
+
 export function TableList() {
   const state: State = initState();
 
-  function loadData(
-    parameters: DataLoaderParameters = { substringFilter: [], orderBy: [] },
-  ) {
-    if (parameters.orderBy) {
-      for (const [columnName, dir] of parameters.orderBy) {
-        state.sorting[columnName] = dir;
-      }
-    }
+  function loadData() {
     api.get<TableRecord[]>("tables").then(
       (tables) => {
         state.tables = orderBy(
           tables,
-          parameters.orderBy.map(([colName, _]) => colName),
-          parameters.orderBy.map(([_, sortDir]) => sortDir),
+          state.orderBy.map(([colName, _]) => colName),
+          state.orderBy.map(([_, sortDir]) => sortDir),
         );
-        if (parameters.substringFilter.length > 0) {
-          state.tables = state.tables.filter((item:TableRecord) => {
-            for (const [field, term] of parameters.substringFilter) {
-              if (item[field].includes(term)) {
-                return true;
-              }
+        const doFilter = (v: string, k: keyof TableRecord) => {
+          v && (state.tables = state.tables.filter((item: TableRecord) => {
+            if (item[k].includes(v)) {
+              return true;
             }
-          });
-        }
+          }));
+        };
+
+        forEach(state.filterBy, doFilter);
         state.loading = false;
         m.redraw();
       },
@@ -74,10 +72,18 @@ export function TableList() {
           { label: "actions" },
           {
             label: "table name",
-            sortDir: state.sorting["name"] || "asc",
+            sortDir: (function () {
+              // const ord = find(state.orderBy, ([k]:[keyof TableRecord]) => k === "name");
+              const ord = find(state.orderBy, { 0: "name" });
+              const [_, dir] = ord;
+              return dir || "asc";
+            }()),
             signals: {
-              onsort: (dir: SortDirection) =>
-                loadData({ substringFilter: [], orderBy: [["name", dir]] }),
+              onsort: (dir: SortDirection) => {
+                state.orderBy = state.orderBy.filter(([k, _]) => k !== "name")
+                  .concat([["name", dir]]);
+                loadData();
+              },
             },
           },
         ],
@@ -88,7 +94,8 @@ export function TableList() {
               input({
                 type: "text",
                 oninput: (e) => {
-                  loadData({substringFilter:[['name', e.target.value]], orderBy:[]})
+                  state.filterBy.name = e.target.value;
+                  loadData();
                 },
                 placeholder: "search",
               }),
