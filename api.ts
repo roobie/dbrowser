@@ -31,8 +31,8 @@ export default {
         } as T);
       } else if (resource === "tables") {
         resolve([
-          "collectionaccount",
-          "party",
+          { name: "collectionaccount" },
+          { name: "party" },
         ] as T);
       } else if (resource === "data") {
         resolve({

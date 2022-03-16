@@ -8,11 +8,13 @@ const { div, span, button, table, thead, tbody, tr, td, th } =
 export interface IStringifiable {
   toString: () => string;
 }
+export type SortDirection = "asc" | "desc";
 export type DataGridRecord = (IStringifiable | Vnode)[];
 export interface DataGridColumnConfig {
   label: string;
+  sortDir: SortDirection;
   signals?: {
-    onsort?: () => void;
+    onsort?: (SortDirection) => void;
   };
 }
 export type DataGridColumnItem = string | DataGridColumnConfig;
@@ -23,7 +25,6 @@ export interface DataGridAttrs {
 }
 
 export function DataGrid(): Vnode {
-  let sorting: string[] = [];
 
   return {
     view(vnode: Vnode<DataGridAttrs>) {
@@ -32,9 +33,15 @@ export function DataGrid(): Vnode {
         thead([
           tr([
             attrs.columns.map((column: DataGridColumnItem) =>
-              typeof (column) === "string"
-                ? th(column)
-                : th([span(column.label), button({}, "ᐃᐁ")])
+              typeof (column) === "string" ? th(column) : th([
+                span(column.label),
+                button({
+                  onclick: () => {
+                    const dir = column.sortDir === "asc" ? "desc" : "asc";
+                    column?.signals?.onsort?.call(null, dir);
+                  },
+                }, column.sortDir === 'asc' ? "ᐃ" : "ᐁ"),
+              ])
             ),
           ]),
         ].concat(attrs.extraThead || [])),
