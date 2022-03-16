@@ -1,0 +1,19 @@
+{
+  "name": "nbdbexplo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "hyperscript-helpers.js",
+  "scripts": {
+    "start": "node build.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/mithril": "^2.0.9",
+    "hyperscript-helpers": "^3.0.3",
+    "mithril": "^2.0.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.14.27"
+  }
+}
